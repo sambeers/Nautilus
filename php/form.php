@@ -12,24 +12,31 @@
     $field_name=$field["name"];
     $available_fields[]=$field_name;
     ${$field_name."_value"}="";
-      if(isset($_GET[$field_name])&&$_GET[$field_name]!==""){
-      ${$field_name."_value"}=$_GET[$field_name];
-      }elseif(isset($_GET[$field_name."_value"])&&$_GET[$field_name."_value"]!==""){
-      ${$field_name."_value"}=$_GET[$field_name."_value"];
-      }
-      if(isset($_POST[$field_name])&&$_POST[$field_name]!==""){
-      ${$field_name."_value"}=$_POST[$field_name];
-      }elseif(isset($_POST[$field_name."_value"])&&$_POST[$field_name."_value"]!==""){
-      ${$field_name."_value"}=$_POST[$field_name."_value"];
-      }
-      if(isset($_FILES[$field_name])&&$_FILES[$field_name]!==""){
-      ${$field_name."_value"}=$_FILES[$field_name];
-      }elseif(isset($_FILES[$field_name."_value"])&&$_FILES[$field_name."_value"]!==""){
-      ${$field_name."_value"}=$_FILES[$field_name."_value"];
+      if(isset(${$field_name."_dynamic"})&&${$field_name."_dynamic"}!==""){
+      ${$field_name."_value"}=str_replace("'","’",${$field_name."_dynamic"});
+      }else{
+        if(isset($_GET[$field_name])&&$_GET[$field_name]!==""){
+        ${$field_name."_value"}=str_replace("'","’",$_GET[$field_name]);
+        }
+        if(isset($_GET[$field_name."_value"])&&$_GET[$field_name."_value"]!==""){
+        ${$field_name."_value"}=str_replace("'","’",$_GET[$field_name."_value"]);
+        }
+        if(isset($_POST[$field_name])&&$_POST[$field_name]!==""){
+        ${$field_name."_value"}=str_replace("'","’",$_POST[$field_name]);
+        }
+        if(isset($_POST[$field_name."_value"])&&$_POST[$field_name."_value"]!==""){
+        ${$field_name."_value"}=str_replace("'","’",$_POST[$field_name."_value"]);
+        }
+        if(isset($_FILES[$field_name])&&$_FILES[$field_name]!==""){
+        ${$field_name."_value"}=str_replace("'","’",$_FILES[$field_name]);
+        }
+        if(isset($_FILES[$field_name."_value"])&&$_FILES[$field_name."_value"]!==""){
+        ${$field_name."_value"}=str_replace("'","’",$_FILES[$field_name."_value"]);
+        }
       }
     }
     if(isset($_REQUEST["submit"])){
-    $iv=mcrypt_create_iv(16,MCRYPT_RAND);
+    $iv=substr(sha1(sha1(sha1(rand()))),0,16);
     $private_key=md5(md5(md5(rand())));
     $submit_value=$_REQUEST["submit"];
       //validation
@@ -67,28 +74,34 @@
             $total_conditions=count($rule_value);
             $passed_conditions=0;
               foreach($rule_value as $condition=>$condition_value){
-                if(isset(${$condition."_value"})&&${$condition."_value"}==$condition_value){//condition met
-                $passed_conditions++;
-                }
-                if($passed_conditions==$total_conditions){//if all conditions have been met, continue
-                  if(!isset(${$field["name"]."_value"})){//reitterate the original required function
-                  $errors[]=array("target"=>$id,"message"=>"missing ".$label);
-                  }elseif(${$field["name"]."_value"}==""){
-                  $errors[]=array("target"=>$id,"message"=>"missing ".$label);
-                  }else{
-                  $passed=true;
+                if($condition_value=="is_true"){
+                  if(isset(${$condition."_value"})&&${$condition."_value"}!==""){
+                  $passed_conditions++;
                   }
-                }else{//if any conditions fail the field is not required
-                $passed=false;//setting to false stops the script from checking the rest of its rules, it will still pass overall validation because that checks for an empty errors array
-                ${$field["name"]."_passed"}=true;
+                }else{
+                  if(isset(${$condition."_value"})&&${$condition."_value"}==$condition_value){//condition met
+                  $passed_conditions++;
+                  }
                 }
+              }
+              if($passed_conditions==$total_conditions){//if all conditions have been met, continue
+                if(!isset(${$field["name"]."_value"})){//reitterate the original required function
+                $errors[]=array("target"=>$id,"message"=>"missing ".$label);
+                }elseif(${$field["name"]."_value"}==""){
+                $errors[]=array("target"=>$id,"message"=>"missing ".$label);
+                }else{
+                $passed=true;
+                }
+              }else{//if any conditions fail the field is not required
+              $passed=false;//setting to false stops the script from checking the rest of its rules, it will still pass overall validation because that checks for an empty errors array
+              ${$field["name"]."_passed"}=true;
               }
             }
           }
           if($passed){//only check other cases after you verify input. everything below will asume value is present so there will hardly be any need for isset statements
           $total_rules=count($field["rules"]);
           $rules_passed=1;
-            foreach($field["rules"] as $rule=>$rule_value){//run fresh loop to avoid any skipped rules from the functions above
+            foreach($field["rules"] as $rule=>$rule_value){//run fresh loop to avoid skipping any rules from the functions above
               switch($rule){
                 case"contains"://checks that rule_value is present in field_value at least once
                   if($rule_value!==""){//rule_value can be anything from a single character to a long string
@@ -111,6 +124,80 @@
                     }
                   }
                 break;
+                case"minimum"://checks that there are at least n# of characters
+                if($rule_value!==""&&is_numeric($rule_value)){//only works with intigers, sorry!
+                  if(strlen(${$field["name"]."_value"})<$rule_value){
+                  $errors[]=array("target"=>$id,"message"=>$label." must be at least {$rule_value} characters long");
+                  }else{
+                  $rules_passed++;
+                  }
+                }
+                break;
+                case"maximum"://same as above but with a reversed opperand
+                if($rule_value!==""&&is_numeric($rule_value)){
+                  if(strlen(${$field["name"]."_value"})>$rule_value){
+                  $errors[]=array("target"=>$id,"message"=>$label." cannot exceed {$rule_value} characters in length");
+                  }else{
+                  $rules_passed++;
+                  }
+                }
+                break;
+                case"unique"://checks that the value is not equal to a supplied column in a supplied table
+                  if($rule_value!==""){
+                  $check=explode(",",$rule_value);//breakup params, [0] is the table, [1] is the column
+                  $ch=curl_init($_."api/");//curl request to the api
+                  curl_setopt($ch,CURLOPT_HEADER,false);
+                  curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
+                  curl_setopt($ch,CURLOPT_POST,true);
+                  $data=array(
+                    "q"=>$check[0],//supplied table
+                    "p"=>$check[1].":".${$field["name"]."_value"}//supplied column : user entered value
+                  );
+                  curl_setopt($ch,CURLOPT_POSTFIELDS, http_build_query($data));
+                  $results=curl_exec($ch);
+                  curl_close($ch);
+                  $results=json_decode($results,true);
+                    if($results["success"]&&$results["results"]){
+                    $errors[]=array("target"=>$id,"message"=>$label." already exists");
+                    }else{
+                    $rules_passed++;
+                    }
+                  }
+                break;
+                case"no_more_than"://for updating - allows n# of duplicate records, similar to 'unique' but with a set number of allowances
+                  if($rule_value!==""){
+                  $check=explode(",",$rule_value);//breakup params, [0] is the number of allowances, [1] is the table, and [2] is the column
+                  $ch=curl_init($_."api/");//curl request to the api
+                  curl_setopt($ch,CURLOPT_HEADER,false);
+                  curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
+                  curl_setopt($ch,CURLOPT_POST,true);
+                  $data=array(
+                    "q"=>$check[1],//supplied table
+                    "p"=>$check[2].":".${$field["name"]."_value"}//supplied column : user entered value
+                  );
+                  curl_setopt($ch,CURLOPT_POSTFIELDS, http_build_query($data));
+                  $results=curl_exec($ch);
+                  curl_close($ch);
+                  $results=json_decode($results,true);
+                    if($results["success"]&&$results["results"]){
+                      if(count($results["results"])>$check[0]){
+                      $errors[]=array("target"=>$id,"message"=>$label." already exists");
+                      }elseif(count($results["results"])==$check[0]){
+                        if(isset($_GET["id"])&&$_GET["id"]!==""){
+                          if($_GET["id"]!==$results["results"][0]["id"]){
+                          $errors[]=array("target"=>$id,"message"=>$label." already exists");
+                          }else{
+                          $rules_passed++;
+                          }
+                        }
+                      }else{
+                      $rules_passed++;
+                      }
+                    }else{
+                    $rules_passed++;
+                    }
+                  }
+                break;
               }
             }
             if($total_rules==$rules_passed){//if all rules conditions were met
@@ -126,39 +213,44 @@
           }
         }
       }
+      //if(strpos(strtolower($submit_value),"draft")!==false||strpos(strtolower($submit_value),"delete")!==false){
+      //$errors=array();
+      //}
     //captcha
-    if(isset($form["method"])){//set captcha request method
-      switch($form["method"]){
-      case"post":
+    if(!isset($form["captcha"])||$form["captcha"]!==false){
+      if(isset($form["method"])){//set captcha request method
+        switch($form["method"]){
+        case"post":
+        $captcha_response=$_POST["g-recaptcha-response"];
+        break;
+        case"get":
+        $captcha_response=$_GET["g-recaptcha-response"];
+        break;
+        case"request":
+        $captcha_response=$_REQUEST["g-recaptcha-response"];
+        break;
+        }
+      }else{//default to post
       $captcha_response=$_POST["g-recaptcha-response"];
-      break;
-      case"get":
-      $captcha_response=$_GET["g-recaptcha-response"];
-      break;
-      case"request":
-      $captcha_response=$_REQUEST["g-recaptcha-response"];
-      break;
       }
-    }else{//default to post
-    $captcha_response=$_POST["g-recaptcha-response"];
+      //make post request to googles recaptcha api
+      $ch=curl_init($captcha_url);
+      curl_setopt($ch,CURLOPT_HEADER,false);
+      curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
+      curl_setopt($ch,CURLOPT_POST,true);
+      $data=array(
+        "secret"=>$captcha_secret,
+        "response"=>$captcha_response,
+        "remoteip"=>$_SERVER["REMOTE_ADDR"]//users ip
+      );
+      curl_setopt($ch,CURLOPT_POSTFIELDS, http_build_query($data));
+      $captcha_results=curl_exec($ch);
+      curl_close($ch);
+      $captcha_results=json_decode($captcha_results,true);
+        if($captcha_results["success"]==false){//failed captcha test
+        $errors[]=array("target"=>"captcha","message"=>"please check the \"I'm not a robot\" button");
+        }
     }
-    //make post request to googles recaptcha api
-    $ch=curl_init($captcha_url);
-    curl_setopt($ch,CURLOPT_HEADER,false);
-    curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
-    curl_setopt($ch,CURLOPT_POST,true);
-    $data=array(
-      "secret"=>$captcha_secret,
-      "response"=>$captcha_response,
-      "remoteip"=>$_SERVER["REMOTE_ADDR"]//users ip
-    );
-    curl_setopt($ch,CURLOPT_POSTFIELDS, http_build_query($data));
-    $captcha_results=curl_exec($ch);
-    curl_close($ch);
-    $captcha_results=json_decode($captcha_results,true);
-      if($captcha_results["success"]==false){//failed captcha test
-      $errors[]=array("target"=>"captcha","message"=>"please check the \"I'm not a robot\" button");
-      }
       if($errors==array()){//nothing in array = all fields pass inspection
       $private_key_encrypted=openssl_encrypt($private_key,$enc_method_1,$public_key,0,$iv);//encrypt private key
       $private_key="";//unset private key
@@ -166,11 +258,15 @@
       $form_success=true;//this value gets returned to the parent file, you can choose the pages fate there
       }
     }
-    foreach($errors as $error){
-    echo"<p><a href='#{$error["target"]}'>".ucwords($error["message"])."</a></p>";
+    if($errors!==array()){
+    echo"<div class='errors'>";
+      foreach($errors as $error){
+      echo"<p><a href='#{$error["target"]}'>".ucSmart($error["message"])."</a></p>";
+      }
+    echo"</div>";
     }
     if($show_form){
-    echo"<form action='";
+    echo"<div class='card'><form action='";
       if(isset($form["action"])&&$form["action"]!==""){
       echo $form["action"];
       }else{
@@ -200,6 +296,7 @@
       $field_group="";
       $hidden_group=false;
       $field_rules="";
+      $field_placeholder="";
         if(isset($field["id"])&&$field["id"]!==""){//populate values if they exist
         $field_id=$field["id"];
         }
@@ -220,6 +317,9 @@
         }
         if(isset($field["value"])&&$field["value"]!==""){
         $field_value=$field["value"];
+        }
+        if(isset($field["placeholder"])&&$field["placeholder"]!==""){
+        $field_placeholder=$field["placeholder"];
         }
         if(isset($field["group"])&&$field["group"]!==""){
           $group=explode("_",$field["group"]);
@@ -278,8 +378,13 @@
         }else{
         echo" ".$field_name;
         }
+        if($field_type=="checkbox"||$field_type=="radio"){
+        echo" ".$field_type;
+        }
         if(isset(${$field_name."_passed"})&&${$field_name."_passed"}==false){
-        echo" error";
+          if($submit_value!=="submit_button_0"){
+          echo" error";
+          }
         }
       echo"'><label for='";
         if($field_id!==""){
@@ -291,6 +396,9 @@
           }
         }
       echo"'>";
+        if(isset($field_rules["required"])&&$field_rules["required"]==true){
+        echo"* ";
+        }
         if($field_label!==""){
           if($field_label!==false&&$field_type!=="checkbox"&&$field_type!=="radio"){
           echo ucSmart($field_label).":";
@@ -365,8 +473,11 @@
           }elseif($select){
           $select_value=$field_value;
           }else{
-          echo"value='{$field_value}'";
+          echo"value='".ucSmart(str_replace("'","’",$field_value))."'";
           }
+        }
+        if($field_placeholder!==""){
+          echo"placeholder='".str_replace("'","’",$field_placeholder)."'";
         }
       echo">";
         if($textarea){
@@ -397,36 +508,27 @@
         }
       echo"</label></div>";
       }
-    if($previous_group!==""){
-    echo"</section>";
-    }
-    echo"<section><div class='field captcha'><label for='captcha'><div id='captcha'class='g-recaptcha commentField'data-sitekey='6LeKVhgTAAAAAFZAjJiI551UclJh4tajSZKEvD9r'></div></label></div>";
-    $has_submit_cta=false;
-      if(isset($cta)){
-        foreach($cta as $cta_){
-          if(!isset($cta_[1])){
-          $has_submit_cta=true;
-          }
-        }
-      }
-      if(isset($_cta)){
-        foreach($_cta as $_cta_){
-          if(!isset($_cta_[1])){
-          $has_submit_cta=true;
-          }
-        }
-      }
-      if(!$has_submit_cta){
-      echo"<div class='field'><label for='submit'><input id='submit'name='submit'type='submit'value='";
-        if(isset($form["submit_text"])&&$form["submit_text"]!==""){
-        echo ucwords($form["submit_text"]);
-        }else{
-        echo"Submit";
-        }
-      echo"'></label></div></section></form>";
-      }else{
+      if($previous_group!==""){
       echo"</section>";
       }
+      if(!isset($form["captcha"])||$form["captcha"]!==false){
+      echo"<div class='field captcha'><div id='captcha'class='g-recaptcha commentField'data-sitekey='{$captcha_public}'></div></div>";
+      }
+    echo"<div class='field submit'>";
+      if($admin){
+        foreach($_cta as $_cta_){
+          if(!isset($_cta_[3])){
+          echo"<input name='submit'type='submit'title='".strtolower($_cta_[1])."'value='".ucSmart($_cta_[0])."'>";
+          }
+        }
+      }else{
+        foreach($cta as $cta_){
+          if(!isset($cta_[3])){
+          echo"<input name='submit'type='submit'title='".strtolower($cta_[1])."'value='".ucSmart($cta_[0])."'>";
+          }
+        }
+      }
+    echo"</div></section></form>";
     }
   }else{
   echo"<section>Form == Undefined</section>";
