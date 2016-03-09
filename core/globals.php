@@ -4,12 +4,11 @@ $current_url="http://".$_SERVER['HTTP_HOST'].$_SERVER['PHP_SELF'];
 $human_readable=explode("index.php",$_SERVER["PHP_SELF"]);
 $human_readable=explode("/",$human_readable[0]);
 $human_readable=implode(" ",$human_readable);
-$human_readable=str_replace("agreements ","",$human_readable);
-$default_h1="Write default META DESCRIPTION here";
-$default_h3="Write default META KEYWORDS here";
-$default_h5="Write default META TITLE here";
-$default_i0="Write default PAGE HEADING here";
-$default_i1="Write default PAGE INTRO here";
+$default_title="Write default META TITLE here";
+$default_description="Write default META DESCRIPTION here";
+$default_keys="Write default META KEYWORDS here";
+$default_intro_h="Write default PAGE HEADING here";
+$default_intro_p="Write default PAGE INTRO here";
 $h=array(
    "<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN''http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html xmlns='http://www.w3.org/1999/xhtml'xml:lang='en'lang='en'><head><meta http-equiv='Content-Type'content='text/html;charset=UTF-8'><meta name='viewport'content='width=device-width,initial-scale=1'><meta name='description'content='",
   "",//meta_desc = $h[1]

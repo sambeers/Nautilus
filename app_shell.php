@@ -40,30 +40,30 @@ unset($dir[0],$dir[1],$dir[2]);
       foreach($j["results"] as $j_){
         //set title
         if(isset($dynamic_meta_title)&&$dynamic_meta_title!==""){
-        $h[5]=$dynamic_meta_title;
+        $h[5]=ucSmart($dynamic_meta_title);
         }elseif(isset($dynamic_intro_h)&&$dynamic_intro_h!==""){
-        $h[5]=$dynamic_intro_h;
+        $h[5]=ucSmart($dynamic_intro_h);
         }elseif(isset($j_["meta_title"])&&$j_["meta_title"]!==""){
         $h[5]=ucSmart($j_["meta_title"]);
         }elseif($_SERVER["PHP_SELF"]!=="/index.php"){
-        $h[5]=$human_readable;
+        $h[5]=ucSmart($human_readable);
         }else{
-        $h[5]=ucSmart($default_h5);
+        $h[5]=ucSmart($default_title);
         }
-        if(strlen($h[5])<30&&$h[5]!==$default_h5){
-        $h[5].=" - ".$default_h5;
+        if(strlen($h[5])<30&&strtolower($h[5])!==strtolower($default_title)){
+        $h[5].=" - ".ucSmart($default_title);
         }
         //set description
         if(isset($dynamic_meta_desc)&&$dynamic_meta_desc!==""){
-        $h[1]=$dynamic_meta_desc;
+        $h[1]=ucfirst($dynamic_meta_desc);
         }elseif(isset($dynamic_intro_p)&&$dynamic_intro_p!==""){
-        $h[1]=$dynamic_intro_p;
+        $h[1]=ucfirst($dynamic_intro_p);
         }elseif(isset($j_["meta_desc"])&&$j_["meta_desc"]!==""){
-        $h[1]=$j_["meta_desc"];
+        $h[1]=ucfirst($j_["meta_desc"]);
         }elseif(isset($j_["description"])&&$j_["description"]!==""){
-        $h[1]=$j_["description"];
+        $h[1]=ucfirst($j_["description"]);
         }else{
-        $h[1]=$default_h1;
+        $h[1]=ucfirst($default_description);
         }
         //set keywords
         if(isset($dynamic_meta_keys)&&$dynamic_meta_keys!==""){
@@ -71,10 +71,10 @@ unset($dir[0],$dir[1],$dir[2]);
         }elseif(isset($j_["meta_keys"])&&$j_["meta_keys"]!==""){
         $h[3]=$j_["meta_keys"];
         }else{
-        $h[3]=$default_h3;
+        $h[3]=$default_keys;
         }
       //begin output
-      echo implode($h)."<header><a href='{$_}'title='Back to Home'><img src='{$_}img/ui/logo.svg'id='logo'alt='{$default_h5}'></a><img src='{$_}img/ui/menu.svg'id='more'alt='Menu'title='Menu'><nav id='menu'><ul>";
+      echo implode($h)."<header><a href='{$_}'title='Back to Home'><img src='{$_}img/ui/logo.svg'id='logo'alt='".ucSmart($default_title)."'></a><img src='{$_}img/ui/menu.svg'id='more'alt='Menu'title='Menu'><nav id='menu'><ul>";
         foreach($n as $nav_item){
           echo"<li><a href='{$_}{$nav_item[1]}'";
             if(isset($nav_item[2])&&$nav_item[2]!==""){
@@ -88,31 +88,31 @@ unset($dir[0],$dir[1],$dir[2]);
       echo"</ul></nav></header><main><section id='intro'>";
         //set intro heading
         if(isset($dynamic_intro_h)&&$dynamic_intro_h!==""){
-        $i[0]=$dynamic_intro_h;
+        $i[0]=ucSmart($dynamic_intro_h);
         }elseif(isset($dynamic_meta_title)&&$dynamic_meta_title!==""){
-        $i[0]=$dynamic_meta_title;
+        $i[0]=ucSmart($dynamic_meta_title);
         }elseif(isset($j_["intro_h"])&&$j_["intro_h"]!==""){
         $i[0]=ucSmart($j_["intro_h"]);
         }elseif(isset($j_["meta_title"])&&$j_["meta_title"]!==""){
         $i[0]=ucSmart($j_["meta_title"]);
         }elseif($_SERVER["PHP_SELF"]!=="/index.php"){
-        $i[0]=$human_readable;
+        $i[0]=ucSmart($human_readable);
         }else{
-        $i[0]=ucSmart($default_i0);
+        $i[0]=ucSmart($default_intro_h);
         }
         //set intro paragraph
         if(isset($dynamic_intro_p)&&$dynamic_intro_p!==""){
-        $i[1]=$dynamic_intro_p;
+        $i[1]=ucfirst($dynamic_intro_p);
         }elseif(isset($dynamic_meta_desc)&&$dynamic_meta_desc!==""){
-        $i[1]=$dynamic_meta_desc;
+        $i[1]=ucfirst($dynamic_meta_desc);
         }elseif(isset($j_["intro_p"])&&$j_["intro_p"]!==""){
-        $i[1]=$j_["intro_p"];
+        $i[1]=ucfirst($j_["intro_p"]);
         }elseif(isset($j_["meta_desc"])&&$j_["meta_desc"]!==""){
-        $i[1]=$j_["meta_desc"];
+        $i[1]=ucfirst($j_["meta_desc"]);
         }elseif(isset($j_["description"])&&$j_["description"]!==""){
-        $i[1]=$j_["description"];
+        $i[1]=ucfirst($j_["description"]);
         }else{
-        $i[1]=$default_i1;
+        $i[1]=ucfirst($default_intro_p);
         }
       echo"<h1>{$i[0]}</h1><p>{$i[1]}</p></section><article>";
         if(isset($j_["body_json"])&&$j_["body_json"]!==""){
@@ -151,9 +151,8 @@ unset($dir[0],$dir[1],$dir[2]);
                   curl_setopt($ch,CURLOPT_POSTFIELDS,http_build_query($data));
                   $response=curl_exec($ch);
                   curl_close($ch);
-                  }
                   $v_j=json_decode($response,true);
-                    if($v_j["success"]){
+                    if($v_j["success"]&&$v_j["results"]){
                       foreach($v_j["results"] as $v_r){
                       $v_r_url="";
                         if(strpos($v_r["url"],"http://")==false){
@@ -165,6 +164,7 @@ unset($dir[0],$dir[1],$dir[2]);
                       curl_setopt($ch,CURLOPT_RETURNTRANSFER,TRUE);
                       $response=curl_exec($ch);
                       $status=curl_getinfo($ch,CURLINFO_HTTP_CODE);
+                      curl_close($ch);
                         if($status!==404){
                         //if curl success then output img
                         echo"<figure itemscope itemtype='https://schema.org/ImageObject'><a itemprop='url'href='{$v_r_url}'><meta itemprop='contentUrl'content='{$v_r_url}'><img itemprop='thumbnail'src='{$v_r_url}'";
@@ -205,7 +205,6 @@ unset($dir[0],$dir[1],$dir[2]);
                           }
                         echo"</figcaption></a></figure>";
                         }
-                      curl_close($ch);
                       }
                     }else{
                     echo"<script>console.log('PHP ERROR: {$v_j["error"]}');</script>";
