@@ -21,12 +21,17 @@ $h=array(
   file_get_contents($cd_."css/critical.css"),//inlined critical css = $h[3]
   "</style>"
 );
-$n=array(
-  array(/*display name*/"home",/*hover text*/"homepage",/*url*/"index.php"),
+$n=array(//main navigation
+  array(
+    "home",//display name
+    "homepage",//url
+    "index.php"//hover text (optional)
+    //classes (comma separated)&(optional)
+    ),
   array("about","learn more about this project","about")
 );
-$fn=array(
-  array("sitemap","for robots","sitemap.xml")
+$fn=array(//footer navigation (same syntax as above)
+  array("sitemap","sitemap.xml","for robots")
 );
 $js=array();
 $jq="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js";

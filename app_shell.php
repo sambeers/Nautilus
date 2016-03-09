@@ -2,23 +2,47 @@
 error_reporting("E_ALL");
 $cd_="";
 $dir=explode("/",$_SERVER['PHP_SELF']);
-unset($dir[0],$dir[1]);
+unset($dir[0],$dir[1],$dir[2]);
   foreach($dir as $dir_){
   $cd_.="../";
   }
-  if(isset($p)||isset($q)){
+  if(isset($page)||isset($q)){
   require_once $cd_."core/init.php";
     if(isset($q)){
-    $j=file_get_contents($_."api?q=".$q);
+    $ch=curl_init($_."api/");
+    curl_setopt($ch,CURLOPT_HEADER,false);
+    curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
+    curl_setopt($ch,CURLOPT_POST,true);
+    $data=array(
+      "q"=>$q,
+    );
+      if(isset($p)){
+      $data["p"]=$p;
+      }
+    curl_setopt($ch,CURLOPT_POSTFIELDS,http_build_query($data));
+    $response=curl_exec($ch);
+    curl_close($ch);
     }else{
-    $j=file_get_contents($_."api?q=page&p=id:".$p);
+    $ch=curl_init($_."api/");
+    curl_setopt($ch,CURLOPT_HEADER,false);
+    curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
+    curl_setopt($ch,CURLOPT_POST,true);
+    $data=array(
+      "q"=>"page",
+      "p"=>"id:".$page
+    );
+    curl_setopt($ch,CURLOPT_POSTFIELDS,http_build_query($data));
+    $response=curl_exec($ch);
+    curl_close($ch);
     }
-  $j=json_decode($j,true);
+  $j=json_decode($response,true);
     if($j["success"]&&$j["results"]){
       foreach($j["results"] as $j_){
         //set title
         if(isset($dynamic_meta_title)&&$dynamic_meta_title!==""){
         $h[5]=$dynamic_meta_title;
+        }elseif(isset($dynamic_intro_h)&&$dynamic_intro_h!==""){
+        $h[5]=$dynamic_intro_h;
         }elseif(isset($j_["meta_title"])&&$j_["meta_title"]!==""){
         $h[5]=ucSmart($j_["meta_title"]);
         }elseif($_SERVER["PHP_SELF"]!=="/index.php"){
@@ -27,11 +51,13 @@ unset($dir[0],$dir[1]);
         $h[5]=ucSmart($default_h5);
         }
         if(strlen($h[5])<30&&$h[5]!==$default_h5){
-        $h[5].=" - Future Cults of California";
+        $h[5].=" - ".$default_h5;
         }
         //set description
         if(isset($dynamic_meta_desc)&&$dynamic_meta_desc!==""){
         $h[1]=$dynamic_meta_desc;
+        }elseif(isset($dynamic_intro_p)&&$dynamic_intro_p!==""){
+        $h[1]=$dynamic_intro_p;
         }elseif(isset($j_["meta_desc"])&&$j_["meta_desc"]!==""){
         $h[1]=$j_["meta_desc"];
         }elseif(isset($j_["description"])&&$j_["description"]!==""){
@@ -48,33 +74,7 @@ unset($dir[0],$dir[1]);
         $h[3]=$default_h3;
         }
       //begin output
-      echo implode($h)."<header><a href='{$_}'title='Back to Home'><img src='{$_}img/ui/logo.svg'id='logo'alt='Future Cults of California'></a>";
-
-        //this go back thing is good, but the computer should figure it out all on its own, i dont need to force feed it some lame array
-
-        /*if(isset($go_back)){
-          foreach($go_back as $go_back_button){
-          echo"<a href='{$_}{$go_back_button["url"]}'";
-            if(isset($go_back_button["title"])){
-            echo"title='{$go_back_button["title"]}'";
-            }
-          echo"><button";
-            if(isset($go_back_button["classes"])){
-            echo" class='";
-            $x=1;
-              foreach($go_back_button["classes"] as $class){
-              echo $class;
-                if($x<count($go_back_button["classes"])){
-                echo" ";
-                }
-              $x++;
-              }
-            echo"'";
-            }
-          echo">".ucwords($go_back_button["text"])."</button></a>";
-          }
-        }*/
-      echo"<img src='{$_}img/ui/menu.svg'id='more'alt='Menu'title='Menu'><nav id='menu'><ul>";
+      echo implode($h)."<header><a href='{$_}'title='Back to Home'><img src='{$_}img/ui/logo.svg'id='logo'alt='{$default_h5}'></a><img src='{$_}img/ui/menu.svg'id='more'alt='Menu'title='Menu'><nav id='menu'><ul>";
         foreach($n as $nav_item){
           echo"<li><a href='{$_}{$nav_item[1]}'";
             if(isset($nav_item[2])&&$nav_item[2]!==""){
@@ -86,13 +86,11 @@ unset($dir[0],$dir[1]);
           echo">".ucSmart($nav_item[0])."</a></li>";
         }
       echo"</ul></nav></header><main><section id='intro'>";
-        //set intro image
-        //if($p==1){
-        //echo"<img src='{$_}img/ui/me.png'>";
-        //}
         //set intro heading
         if(isset($dynamic_intro_h)&&$dynamic_intro_h!==""){
         $i[0]=$dynamic_intro_h;
+        }elseif(isset($dynamic_meta_title)&&$dynamic_meta_title!==""){
+        $i[0]=$dynamic_meta_title;
         }elseif(isset($j_["intro_h"])&&$j_["intro_h"]!==""){
         $i[0]=ucSmart($j_["intro_h"]);
         }elseif(isset($j_["meta_title"])&&$j_["meta_title"]!==""){
@@ -105,6 +103,8 @@ unset($dir[0],$dir[1]);
         //set intro paragraph
         if(isset($dynamic_intro_p)&&$dynamic_intro_p!==""){
         $i[1]=$dynamic_intro_p;
+        }elseif(isset($dynamic_meta_desc)&&$dynamic_meta_desc!==""){
+        $i[1]=$dynamic_meta_desc;
         }elseif(isset($j_["intro_p"])&&$j_["intro_p"]!==""){
         $i[1]=$j_["intro_p"];
         }elseif(isset($j_["meta_desc"])&&$j_["meta_desc"]!==""){
@@ -115,8 +115,8 @@ unset($dir[0],$dir[1]);
         $i[1]=$default_i1;
         }
       echo"<h1>{$i[0]}</h1><p>{$i[1]}</p></section><article>";
-        if(isset($j_["body"])&&$j_["body"]!==""){
-          foreach($j_["body"] as $body){
+        if(isset($j_["body_json"])&&$j_["body_json"]!==""){
+          foreach($j_["body_json"] as $body){
             foreach($body as $k=>$v){
               switch($k){
                 case"md":
@@ -139,9 +139,20 @@ unset($dir[0],$dir[1]);
                   $sprd=true;
                   }
                   foreach($v as $v_){
-                  //get id
-                  $v_j=file_get_contents($_."api?q=image&p=id:".$v_);
-                  $v_j=json_decode($v_j,true);
+                  //get img data
+                  $ch=curl_init($_."api/");
+                  curl_setopt($ch,CURLOPT_HEADER,false);
+                  curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
+                  curl_setopt($ch,CURLOPT_POST,true);
+                  $data=array(
+                    "q"=>"image",
+                    "p"=>"id:".$v_
+                  );
+                  curl_setopt($ch,CURLOPT_POSTFIELDS,http_build_query($data));
+                  $response=curl_exec($ch);
+                  curl_close($ch);
+                  }
+                  $v_j=json_decode($response,true);
                     if($v_j["success"]){
                       foreach($v_j["results"] as $v_r){
                       $v_r_url="";
@@ -150,11 +161,11 @@ unset($dir[0],$dir[1]);
                         }
                       $v_r_url.=$v_r["url"]."";
                       //check that image exists
-                      $hndl=curl_init($v_r_url);
-                      curl_setopt($hndl,CURLOPT_RETURNTRANSFER,TRUE);
-                      $rspns=curl_exec($hndl);
-                      $stts=curl_getinfo($hndl,CURLINFO_HTTP_CODE);
-                        if($stts!==404){
+                      $ch=curl_init($v_r_url);
+                      curl_setopt($ch,CURLOPT_RETURNTRANSFER,TRUE);
+                      $response=curl_exec($ch);
+                      $status=curl_getinfo($ch,CURLINFO_HTTP_CODE);
+                        if($status!==404){
                         //if curl success then output img
                         echo"<figure itemscope itemtype='https://schema.org/ImageObject'><a itemprop='url'href='{$v_r_url}'><meta itemprop='contentUrl'content='{$v_r_url}'><img itemprop='thumbnail'src='{$v_r_url}'";
                           //title
@@ -194,10 +205,10 @@ unset($dir[0],$dir[1]);
                           }
                         echo"</figcaption></a></figure>";
                         }
-                      curl_close($hndl);
+                      curl_close($ch);
                       }
                     }else{
-                    echo $v_j["error"];
+                    echo"<script>console.log('PHP ERROR: {$v_j["error"]}');</script>";
                     }
                   }
                   if($sprd){
@@ -208,14 +219,14 @@ unset($dir[0],$dir[1]);
                 case"include":
                   foreach($v as $v_){
                   $v_url=$cd_."php/".$v_.".php";
-                  $hndl=curl_init($v_url);
-                  curl_setopt($hndl,CURLOPT_RETURNTRANSFER,TRUE);
-                  $rspns=curl_exec($hndl);
-                  $stts=curl_getinfo($hndl,CURLINFO_HTTP_CODE);
-                    if($stts!==404){
+                  $ch=curl_init($v_url);
+                  curl_setopt($ch,CURLOPT_RETURNTRANSFER,TRUE);
+                  $response=curl_exec($ch);
+                  $status=curl_getinfo($ch,CURLINFO_HTTP_CODE);
+                    if($status!==404){
                     include $v_url;
                     }
-                  curl_close($hndl);
+                  curl_close($ch);
                   }
                 break;
                 case"script":
@@ -225,14 +236,14 @@ unset($dir[0],$dir[1]);
                     $v_url=$cd_."js/";
                     }
                   $v_url.=$v_.".js";
-                  $hndl=curl_init($v_url);
-                  curl_setopt($hndl,CURLOPT_RETURNTRANSFER,TRUE);
-                  $rspns=curl_exec($hndl);
-                  $stts=curl_getinfo($hndl,CURLINFO_HTTP_CODE);
-                    if($stts!==404){
+                  $ch=curl_init($v_url);
+                  curl_setopt($ch,CURLOPT_RETURNTRANSFER,TRUE);
+                  $response=curl_exec($ch);
+                  $status=curl_getinfo($ch,CURLINFO_HTTP_CODE);
+                    if($status!==404){
                     $js[]=$v_url;
                     }
-                  curl_close($hndl);
+                  curl_close($ch);
                   }
                 break;
                 case"var":
@@ -246,7 +257,6 @@ unset($dir[0],$dir[1]);
         }//include scripts at the bottom of page body
         if(count($js)>0){
         echo"<script src='".$jq."'></script>";
-        $has_jq=true;//jQuerys ben set, dont echo it anywhere else
           foreach($js as $js_){
           echo"<script async src='";
             if(strpos($js_,"http")!==false){
@@ -266,11 +276,11 @@ unset($dir[0],$dir[1]);
   }
 echo"</article></main><footer><nav><ul>";
   foreach($fn as $fn_){
-  echo"<li><a href='{$fn_[2]}'";
-    if($fn_[1]!==""){
-    echo"title='".ucSmart($fn_[1])."'";
+  echo"<li><a href='{$fn_[1]}'";
+    if(isset($fn_[2])&&$fn_[2]!==""){
+    echo"title='".ucSmart($fn_[2])."'";
     }
-    if($fn_[3]!==""){
+    if(isset($fn_[3])&&$fn_[3]!==""){
     echo"class='{$fn_[3]}'";
     }
   echo">".ucSmart($fn_[0])."</a></li>";
