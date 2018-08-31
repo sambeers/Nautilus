@@ -12,4 +12,4 @@ Donate
 
 If you enjoyed this project please consider sending a dollar or two as a thank you for the work :)
 
-[PayPal](https://paypal.me/sammurphey)
+[PayPal](https://paypal.me/sammurphey) · [KoFi](https://kofi.com/sammurphey)
